@@ -1,0 +1,403 @@
+/* ─────────────────────────────────────────────
+   TranslatorApp.module.css
+   Design tokens
+───────────────────────────────────────────── */
+:root {
+  --bg:           #09090f;
+  --card-bg:      rgba(18, 14, 10, 0.9);
+  --gold:         #c8900a;
+  --gold-bright:  #e8b020;
+  --gold-faint:   rgba(200, 144, 10, 0.1);
+  --gold-border:  rgba(200, 144, 10, 0.2);
+  --gold-line:    rgba(200, 144, 10, 0.15);
+  --gold-sep:     rgba(200, 144, 10, 0.08);
+  --gold-sep2:    rgba(200, 144, 10, 0.06);
+  --text:         #f0e6d0;
+  --text-output:  #f5e6c8;
+  --text-muted:   #786050;
+  --text-faint:   #3a3028;
+  --text-yellow:  #f5c842;
+  --error:        #e74c3c;
+  --font:         'Georgia', 'Times New Roman', serif;
+  --font-mono:    'Courier New', monospace;
+}
+
+/* ── Page shell ─────────────────────────────── */
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: var(--font);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Ambient blobs ──────────────────────────── */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.blobTopLeft {
+  top: -20%; left: -10%;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(180,100,40,0.1) 0%, transparent 70%);
+}
+.blobBottomRight {
+  bottom: -10%; right: -10%;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(80,60,160,0.08) 0%, transparent 70%);
+}
+
+/* ── Header ─────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.subtitle {
+  font-size: 12px;
+  letter-spacing: 6px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  font-style: italic;
+}
+.directionRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  transition: opacity 0.3s;
+}
+.directionRow.flipping {
+  opacity: 0;
+}
+.langLabel {
+  font-size: clamp(22px, 4vw, 36px);
+}
+.arrow {
+  color: var(--gold);
+  font-size: clamp(22px, 4vw, 36px);
+  font-style: italic;
+}
+.poweredBy {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/* ── Main card ──────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 780px;
+  background: var(--card-bg);
+  border: 1px solid var(--gold-border);
+  border-radius: 4px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+
+/* ── Mode tabs ──────────────────────────────── */
+.modeTabs {
+  display: flex;
+  border-bottom: 1px solid var(--gold-line);
+}
+.modeTab {
+  flex: 1;
+  padding: 12px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+.modeTab:hover {
+  color: var(--gold);
+}
+.modeTabActive {
+  background: var(--gold-faint);
+  border-bottom-color: var(--gold);
+  color: var(--text-yellow);
+}
+.modeEmoji {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+/* ── Mode description bar ───────────────────── */
+.modeBar {
+  padding: 8px 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--gold-sep);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.modeDesc {
+  flex: 1;
+}
+.beamControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.beamBtn {
+  padding: 1px 7px;
+  background: transparent;
+  border: 1px solid rgba(200,144,10,0.4);
+  border-radius: 2px;
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font);
+  transition: all 0.2s;
+}
+.beamBtnActive {
+  background: var(--gold);
+  color: #0a0a0f;
+}
+
+/* ── Translation panel ──────────────────────── */
+.panel {
+  display: flex;
+  align-items: stretch;
+  min-height: 180px;
+}
+.panelSide {
+  flex: 1;
+  padding: 20px;
+}
+.panelSide:first-child {
+  border-right: 1px solid rgba(200,144,10,0.1);
+}
+.panelLabel {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+.panelLabelOutput {
+  color: var(--gold);
+}
+
+/* ── Textarea ───────────────────────────────── */
+.textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 17px;
+  font-family: var(--font);
+  padding: 0;
+  resize: none;
+  outline: none;
+  line-height: 1.7;
+}
+.textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 6px 0 0;
+}
+
+/* ── Output text ────────────────────────────── */
+.outputText {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text-output);
+  margin: 0;
+  animation: fadeIn 0.4s ease;
+}
+.placeholder {
+  color: var(--text-faint);
+  font-size: 14px;
+  font-style: italic;
+  margin: 8px 0 0;
+}
+.errorText {
+  color: var(--error);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Copy button ────────────────────────────── */
+.copyBtn {
+  margin-top: 16px;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid rgba(200,144,10,0.3);
+  border-radius: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font);
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.copyBtn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── Centre icon buttons ────────────────────── */
+.panelControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  gap: 12px;
+}
+.iconBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1px solid rgba(200,144,10,0.35);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.3s;
+}
+.iconBtn:hover {
+  background: rgba(200,144,10,0.25);
+}
+.iconBtnFlipping {
+  transform: rotate(180deg);
+}
+.iconBtnTranslate {
+  background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+  border: none;
+  color: #0a0a0f;
+}
+.iconBtnDisabled {
+  background: var(--gold-faint) !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+}
+
+/* ── Full-width translate button ────────────── */
+.cardFooter {
+  padding: 12px 20px;
+  border-top: 1px solid var(--gold-sep);
+}
+.translateBtn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+  border: none;
+  border-radius: 2px;
+  color: #0a0a0f;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.translateBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.translateBtnDisabled {
+  background: var(--gold-faint) !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+}
+
+/* ── Card meta row ──────────────────────────── */
+.cardMeta {
+  padding: 10px 20px;
+  border-top: 1px solid var(--gold-sep2);
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  justify-content: space-between;
+}
+.code {
+  color: var(--text-muted);
+}
+
+/* ── Setup box ──────────────────────────────── */
+.setupBox {
+  margin-top: 32px;
+  max-width: 780px;
+  width: 100%;
+  padding: 20px;
+  background: rgba(10,10,15,0.5);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+.setupTitle {
+  color: var(--gold);
+  margin: 0 0 8px;
+  letter-spacing: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.setupPre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #a09080;
+  white-space: pre-wrap;
+}
+.setupNote {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+.codeAccent {
+  color: var(--gold);
+}
+
+/* ── Spinner ─────────────────────────────────── */
+.spinner {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Animations ──────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Global box-sizing ───────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
