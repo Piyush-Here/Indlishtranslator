@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import styles from "../styles/TranslatorApp.module.css";
 
-const API_URL = "http://localhost:5000/translate";
+// ── Use relative /api path so Vite's proxy handles it (fixes CORS issues) ────
+const API_BASE = "/api";
 
 const LANG_CONFIG = {
   en_hi: {
@@ -23,12 +24,39 @@ const LANG_CONFIG = {
 };
 
 const MODE_CONFIG = {
-  baseline: { emoji: "⚡", label: "Baseline",     desc: "Basic Seq2Seq, greedy" },
-  attention: { emoji: "🔍", label: "Attention",   desc: "Bahdanau attention, greedy" },
-  beam:      { emoji: "🔦", label: "Beam Search", desc: "Attention + beam" },
+  baseline:  { emoji: "⚡", label: "Baseline",     desc: "Basic Seq2Seq, greedy" },
+  attention: { emoji: "🔍", label: "Attention",    desc: "Bahdanau attention, greedy" },
+  beam:      { emoji: "🔦", label: "Beam Search",  desc: "Attention + beam" },
 };
 
 const BEAM_OPTIONS = [3, 5, 8, 10];
+
+// ── How long (ms) to wait before giving up on the backend ────────────────────
+const REQUEST_TIMEOUT_MS = 60_000; // 60 s — model inference can be slow
+
+// ── Helper: fetch with timeout ────────────────────────────────────────────────
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+// ── Helper: normalise any fetch/network error into a friendly string ──────────
+function friendlyError(err) {
+  if (err.name === "AbortError") {
+    return "⏱ Request timed out — the model might still be loading. Try again in a moment.";
+  }
+  // TypeError covers "Failed to fetch", "NetworkError", "net::ERR_CONNECTION_REFUSED" etc.
+  if (err instanceof TypeError || err.message?.toLowerCase().includes("fetch")) {
+    return "⚠️ Cannot reach backend — make sure app.py is running on port 5000.";
+  }
+  return err.message || "Unknown error";
+}
 
 export default function TranslatorApp() {
   const [direction, setDirection] = useState("en_hi");
@@ -39,9 +67,26 @@ export default function TranslatorApp() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [flipping, setFlipping]   = useState(false);
+  // null = unknown, true = up, false = down
+  const [backendUp, setBackendUp] = useState(null);
   const textareaRef = useRef(null);
 
   const L = LANG_CONFIG[direction];
+
+  // ── Health-check on mount & every 30 s ─────────────────────────────────────
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetchWithTimeout(`${API_BASE}/health`, {}, 5000);
+        setBackendUp(res.ok);
+      } catch {
+        setBackendUp(false);
+      }
+    };
+    check();
+    const interval = setInterval(check, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFlip = () => {
     setFlipping(true);
@@ -55,30 +100,46 @@ export default function TranslatorApp() {
   };
 
   const handleTranslate = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
+
     setLoading(true);
     setError("");
     setOutput("");
 
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input.trim(), direction, mode, beam_k: beamK }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Server error ${res.status}`);
-      }
-      const data = await res.json();
-      setOutput(data.translation || "");
-    } catch (err) {
-      setError(
-        err.message.includes("fetch")
-          ? "⚠️ Cannot reach backend — make sure app.py is running on port 5000."
-          : err.message
+      const res = await fetchWithTimeout(
+        `${API_BASE}/translate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: input.trim(), direction, mode, beam_k: beamK }),
+        },
+        REQUEST_TIMEOUT_MS
       );
+
+      // Always try to parse JSON — Flask returns JSON even for 4xx/5xx errors
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned non-JSON response (status ${res.status})`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Server error ${res.status}`);
+      }
+
+      setOutput(data.translation ?? "");
+      // Mark backend as confirmed up
+      setBackendUp(true);
+
+    } catch (err) {
+      setError(friendlyError(err));
+      if (err instanceof TypeError || err.name === "AbortError") {
+        setBackendUp(false);
+      }
     } finally {
+      // ✅ Always clear loading — this is the fix for the "stuck on Translating" bug
       setLoading(false);
     }
   };
@@ -91,6 +152,12 @@ export default function TranslatorApp() {
     mode === "beam"
       ? `Attention + beam k=${beamK}`
       : MODE_CONFIG[mode].desc;
+
+  // ── Backend status pill ────────────────────────────────────────────────────
+  const statusPill =
+    backendUp === null  ? { text: "Checking backend…", cls: styles.statusChecking } :
+    backendUp           ? { text: "✅ Backend online",  cls: styles.statusOnline   } :
+                          { text: "❌ Backend offline", cls: styles.statusOffline  };
 
   return (
     <div className={styles.page}>
@@ -107,6 +174,10 @@ export default function TranslatorApp() {
           <span className={styles.langLabel}>{L.to} {L.toFlag}</span>
         </div>
         <p className={styles.poweredBy}>Powered by your trained LSTM model</p>
+        {/* Backend status indicator */}
+        <span className={`${styles.statusPill} ${statusPill.cls}`}>
+          {statusPill.text}
+        </span>
       </header>
 
       {/* Main card */}
@@ -195,7 +266,7 @@ export default function TranslatorApp() {
               <p className={styles.outputText}>{output}</p>
             ) : (
               <p className={styles.placeholder}>
-                {loading ? "Decoding..." : "Translation appears here"}
+                {loading ? "Decoding…" : "Translation appears here"}
               </p>
             )}
             {output && !loading && (
@@ -216,7 +287,7 @@ export default function TranslatorApp() {
             disabled={loading || !input.trim()}
             className={`${styles.translateBtn} ${loading || !input.trim() ? styles.translateBtnDisabled : ""}`}
           >
-            {loading ? "Translating..." : `Translate ${L.fromFlag} → ${L.toFlag}`}
+            {loading ? "Translating…" : `Translate ${L.fromFlag} → ${L.toFlag}`}
           </button>
         </div>
 
